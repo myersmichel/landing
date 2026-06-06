@@ -69,9 +69,7 @@ body {
   font-size:26px;
   margin-bottom:10px;
 }
-/* CHANGE YOUR NAME HERE */
 .profile-name { font-size:17px; font-weight:600; color:#f0f0f0; }
-/* CHANGE YOUR BIO HERE */
 .profile-bio  { font-size:12px; color:#555; margin-top:4px; }
 
 /* Floating blocks */
@@ -138,6 +136,22 @@ body {
 }
 .fab:hover { background:#ddd; }
 
+/* Reset positions button */
+.reset-btn {
+  position:fixed;
+  bottom:20px; left:20px;
+  padding:8px 14px;
+  background:transparent;
+  border:1px solid #2a2a2a;
+  border-radius:20px;
+  color:#3a3a3a; font-size:11px;
+  font-family:'Inter',sans-serif;
+  cursor:pointer;
+  z-index:999;
+  transition:border-color 0.15s, color 0.15s;
+}
+.reset-btn:hover { border-color:#444; color:#666; }
+
 /* Modal */
 .modal-wrap {
   display:none;
@@ -190,12 +204,6 @@ body {
   color:#555; font-size:13px;
   font-family:'Inter',sans-serif; cursor:pointer;
 }
-
-.hint {
-  position:fixed; bottom:24px; left:16px;
-  font-size:10px; color:#2a2a2a; letter-spacing:0.05em;
-  pointer-events:none;
-}
 </style>
 </head>
 <body>
@@ -203,22 +211,16 @@ body {
 <div id="canvas">
 
   <div class="profile">
-    <!-- Change the emoji, name and bio -->
+    <!-- CHANGE: emoji, name, bio -->
     <div class="avatar">🎵</div>
     <div class="profile-name">Your Name</div>
     <div class="profile-bio">musician · producer · your city</div>
   </div>
 
-  <!-- =====================================================
-       BLOCKS
-       - Replace href="#" with your real URLs
-       - To move default positions: change top/left values
-       - Spotify/YouTube: uncomment the iframe and paste URL
-       ===================================================== -->
-
   <!-- SPOTIFY EMBED
-       Get embed URL: Spotify > ··· > Share > Embed track > copy src URL -->
-  <div class="fblock" id="b-spotify" style="top:160px; left:5%">
+       Get embed URL: Spotify > ... > Share > Embed > copy src URL
+       Then delete the embed-ph div and uncomment the iframe -->
+  <div class="fblock" id="b-spotify" data-default-top="160" data-default-left="5vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#1DB954"></div>
       <span class="block-label">Spotify</span>
@@ -238,7 +240,7 @@ body {
 
   <!-- YOUTUBE EMBED
        Get embed URL: YouTube > Share > Embed > copy src URL -->
-  <div class="fblock" id="b-youtube" style="top:160px; right:5%; left:auto">
+  <div class="fblock" id="b-youtube" data-default-top="160" data-default-left="55vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#FF0000"></div>
       <span class="block-label">YouTube</span>
@@ -257,7 +259,7 @@ body {
   </div>
 
   <!-- SOUNDCLOUD — replace # with your URL -->
-  <div class="fblock" id="b-sc" style="top:360px; left:5%">
+  <div class="fblock" id="b-sc" data-default-top="360" data-default-left="5vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#ff5500"></div>
       <span class="block-label">SoundCloud</span>
@@ -274,7 +276,7 @@ body {
   </div>
 
   <!-- BANDCAMP — replace # with your URL -->
-  <div class="fblock" id="b-bc" style="top:360px; right:5%; left:auto">
+  <div class="fblock" id="b-bc" data-default-top="360" data-default-left="55vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#1da0c3"></div>
       <span class="block-label">Bandcamp</span>
@@ -291,7 +293,7 @@ body {
   </div>
 
   <!-- INSTAGRAM — replace # with your URL -->
-  <div class="fblock" id="b-ig" style="top:480px; left:5%">
+  <div class="fblock" id="b-ig" data-default-top="480" data-default-left="5vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#e1306c"></div>
       <span class="block-label">Instagram</span>
@@ -308,7 +310,7 @@ body {
   </div>
 
   <!-- TIKTOK — replace # with your URL -->
-  <div class="fblock" id="b-tt" style="top:480px; right:5%; left:auto">
+  <div class="fblock" id="b-tt" data-default-top="480" data-default-left="55vw">
     <div class="block-handle">
       <div class="block-dot" style="background:#444"></div>
       <span class="block-label">TikTok</span>
@@ -324,8 +326,8 @@ body {
     </a>
   </div>
 
-  <!-- EMAIL — replace you@email.com with your email -->
-  <div class="fblock" id="b-email" style="top:600px; left:50%; transform:translateX(-50%)">
+  <!-- EMAIL — replace you@email.com -->
+  <div class="fblock" id="b-email" data-default-top="600" data-default-left="calc(50vw - 100px)">
     <div class="block-handle">
       <div class="block-dot" style="background:#444"></div>
       <span class="block-label">Email</span>
@@ -344,7 +346,7 @@ body {
 </div>
 
 <button class="fab" onclick="openModal()" title="Add a block">+</button>
-<div class="hint">drag blocks freely</div>
+<button class="reset-btn" onclick="resetPositions()">reset layout</button>
 
 <!-- Add block modal -->
 <div class="modal-wrap" id="modal" onclick="bgClose(event)">
@@ -379,13 +381,44 @@ body {
 </div>
 
 <script>
+  const STORAGE_KEY = 'block_positions';
   let dragging = null, ox = 0, oy = 0;
 
+  /* ── Save / restore positions ── */
+  function savePosition(id, x, y) {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    all[id] = { x, y };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  }
+
+  function loadPositions() {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    document.querySelectorAll('.fblock[id]').forEach(el => {
+      const saved = all[el.id];
+      if (saved) {
+        el.style.transform = '';
+        el.style.left  = saved.x + 'px';
+        el.style.top   = saved.y + 'px';
+        el.style.right = 'auto';
+      } else {
+        /* use data-default values as initial pixel positions */
+        const dt = parseFloat(el.dataset.defaultTop  || 200);
+        const dl = el.dataset.defaultLeft || '20px';
+        el.style.top = dt + 'px';
+        /* defaultLeft may be a vw/calc expression — let the browser resolve it */
+        el.style.left = dl;
+      }
+    });
+  }
+
+  function resetPositions() {
+    localStorage.removeItem(STORAGE_KEY);
+    loadPositions();
+  }
+
+  /* ── Drag ── */
   function resolvePos(el) {
-    if (el.style.left && el.style.left !== 'auto' && !el.style.left.includes('%')) {
-      return { x: parseFloat(el.style.left), y: parseFloat(el.style.top) };
-    }
-    const r  = el.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
     return { x: r.left + window.scrollX, y: r.top + window.scrollY };
   }
 
@@ -393,8 +426,9 @@ body {
     if (e.target.tagName === 'A') return;
     dragging = el;
     el.classList.add('dragging');
-    el.style.transform = '';
+    /* pin to exact pixel position so transform doesn't interfere */
     const pos = resolvePos(el);
+    el.style.transform = '';
     el.style.left  = pos.x + 'px';
     el.style.top   = pos.y + 'px';
     el.style.right = 'auto';
@@ -419,7 +453,13 @@ body {
   }
 
   function endDrag() {
-    if (dragging) dragging.classList.remove('dragging');
+    if (dragging) {
+      dragging.classList.remove('dragging');
+      /* save final position */
+      if (dragging.id) {
+        savePosition(dragging.id, parseFloat(dragging.style.left), parseFloat(dragging.style.top));
+      }
+    }
     dragging = null;
   }
 
@@ -428,12 +468,15 @@ body {
     el.addEventListener('touchstart', e => startDrag(e, el), { passive: false });
   }
 
+  /* init */
+  loadPositions();
   document.querySelectorAll('.fblock').forEach(bindDrag);
   document.addEventListener('mousemove',  onMove);
   document.addEventListener('touchmove',  onMove, { passive: false });
   document.addEventListener('mouseup',    endDrag);
   document.addEventListener('touchend',   endDrag);
 
+  /* ── Modal ── */
   let formType = '';
 
   function openModal()  { document.getElementById('modal').classList.add('open'); }
@@ -457,13 +500,15 @@ body {
     const sub   = document.getElementById('f-sub').value.trim();
     if (!url) return;
 
+    const id    = 'b-custom-' + Date.now();
     const block = document.createElement('div');
     block.className = 'fblock';
-    block.style.top  = (120 + Math.random() * 200) + 'px';
-    block.style.left = (20  + Math.random() * 100) + 'px';
+    block.id = id;
+    block.style.top  = (120 + Math.random() * 160) + 'px';
+    block.style.left = (20  + Math.random() * 120) + 'px';
 
     if (formType === 'youtube') {
-      const m = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const m   = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       const src = m ? 'https://www.youtube.com/embed/' + m[1] : url;
       block.innerHTML = `
         <div class="block-handle">
@@ -475,7 +520,10 @@ body {
           <iframe src="${src}" height="112" allowfullscreen></iframe>
         </div>`;
     } else if (formType === 'spotify') {
-      const src = url.replace('/track/','/embed/track/').replace('/album/','/embed/album/').replace('/playlist/','/embed/playlist/');
+      const src = url
+        .replace('/track/','/embed/track/')
+        .replace('/album/','/embed/album/')
+        .replace('/playlist/','/embed/playlist/');
       block.innerHTML = `
         <div class="block-handle">
           <div class="block-dot" style="background:#1DB954"></div>
